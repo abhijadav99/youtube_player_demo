@@ -1,102 +1,80 @@
+import 'dart:html';
+import 'dart:js' as js;
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'dart:ui_web' as ui_web;
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: PlyrPlayer(),
+  ));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class PlyrPlayer extends StatelessWidget {
+  const PlyrPlayer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'YouTube Player Demo',
-      debugShowCheckedModeBanner: false,
-      home: YouTubePlayerScreen(),
-    );
-  }
-}
+    const viewId = 'plyr-view';
 
-class YouTubePlayerScreen extends StatefulWidget {
-  const YouTubePlayerScreen({super.key});
+    // Register platform view
+   ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+  final container = DivElement()
+    ..id = 'flutter-container'
+    ..style.width = '100%'
+    ..style.height = '100%'
+    ..style.border = 'none';
 
-  @override
-  State<YouTubePlayerScreen> createState() => _YouTubePlayerScreenState();
-}
+  // Delay to allow DOM to be ready
+  Future.delayed(const Duration(milliseconds: 100), () {
+    js.context.callMethod('createPlyr', ['E3oG313_kps']); // YouTube ID
+  });
 
-class _YouTubePlayerScreenState extends State<YouTubePlayerScreen> {
-  late YoutubePlayerController _controller;
-  final String videoUrl = 'https://www.youtube.com/watch?v=E3oG313_kps';
+  return container;
+});
 
-  @override
-  void initState() {
-    super.initState();
-    final videoId = YoutubePlayer.convertUrlToId(videoUrl)!;
 
-    _controller = YoutubePlayerController(
-      initialVideoId: videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: false,
-        mute: false,
-        controlsVisibleAtStart: true,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return YoutubePlayerBuilder(
-      player: YoutubePlayer(
-        controller: _controller,
-        showVideoProgressIndicator: true,
-        progressIndicatorColor: Colors.red,
-        progressColors: const ProgressBarColors(
-          playedColor: Colors.red,
-          handleColor: Colors.redAccent,
-        ),
-        bottomActions: [
-          CurrentPosition(),
-          ProgressBar(isExpanded: true),
-          RemainingDuration(),
-          PlaybackSpeedButton(),
-          FullScreenButton(),
+    return Scaffold(
+      appBar: AppBar(title: const Text('YouTube Player')),
+      body: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              margin: const EdgeInsets.all(16),
+              child: const HtmlElementView(
+                viewType: viewId,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Wrap(
+              spacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildControlButton('Play', 'plyrPlay'),
+                _buildControlButton('Pause', 'plyrPause'),
+                _buildControlButton('Mute', 'plyrMute'),
+                _buildControlButton('Unmute', 'plyrUnmute'),
+              ],
+            ),
+          ),
         ],
       ),
-      builder: (context, player) => Scaffold(
-        appBar: AppBar(title: const Text('YouTube Player')),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              player,
-              const SizedBox(height: 20),
-              if (_controller.value.isReady)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.play_arrow),
-                      onPressed: () => _controller.play(),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.pause),
-                      onPressed: () => _controller.pause(),
-                    ),
-                  ],
-                )
-              else
-                const CircularProgressIndicator(),
-            ],
-          ),
-        ),
+    );
+  }
+
+  Widget _buildControlButton(String text, String jsMethod) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       ),
+      onPressed: () => js.context.callMethod(jsMethod),
+      child: Text(text),
     );
   }
 }

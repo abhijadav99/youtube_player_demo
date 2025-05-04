@@ -1,38 +1,201 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Flutter Plyr Player">
+  <title>Plyr Player Demo</title>
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="youtube_player_demo">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <!-- Plyr CSS -->
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <!-- Plyr JS -->
+  <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
-  <title>youtube_player_demo</title>
-  <link rel="manifest" href="manifest.json">
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #player-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .plyr__video-embed {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* Hide unwanted elements */
+    .plyr__control--overlaid,
+    .plyr__time,
+    .plyr__menu {
+      display: none !important;
+    }
+
+    #speed-controls {
+      display: inline-flex;
+      gap: 10px;
+    }
+
+    #speed-controls button {
+      padding: 8px 16px;
+      font-size: 16px;
+      background-color: #1f1f1f;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #speed-controls button:hover {
+      background-color: #444;
+      transform: scale(1.05);
+    }
+
+    #speed-controls button:active {
+      background-color: #666;
+    }
+  </style>
+
+  <script>
+    window.createPlyr = function (videoId) {
+      const container = document.getElementById("flutter-container");
+
+      if (!container) {
+        console.error("Container not found");
+        return;
+      }
+
+      container.innerHTML = `
+  <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <div style="position: relative; width: 60%; height: 60%;">
+      <div class="plyr__video-embed" id="yt-player" style="width: 100%; height: 100%;">
+        <iframe
+          src="https://www.youtube.com/embed/${videoId}?autoplay=0&iv_load_policy=3&modestbranding=1&playsinline=1&showinfo=0&rel=0&enablejsapi=1&controls=1&origin=${window.location.origin}"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          referrerpolicy="no-referrer"
+          style="width: 100%; height: 100%; border: none;"
+        ></iframe>
+        <div id="rightClickBlocker"
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            background: transparent;
+          ">
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+      <div id="speed-controls">
+        <button onclick="rewind10s()">« 10s</button>
+        <button onclick="setPlaybackSpeed(0.5)">0.5x</button>
+        <button onclick="setPlaybackSpeed(1)">1x</button>
+        <button onclick="setPlaybackSpeed(1.5)">1.5x</button>
+        <button onclick="setPlaybackSpeed(2)">2x</button>
+        <button onclick="forward10s()">10s »</button>
+      </div>
+    </div>
+  </div>
+`;
+
+
+      const blocker = document.getElementById('rightClickBlocker');
+      blocker.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+      });
+
+      setTimeout(() => {
+        const player = new Plyr('#yt-player', {
+          youtube: {
+            noCookie: true,
+            rel: 0,
+            iv_load_policy: 3,
+            controls: 1,
+            disablekb: 1
+          },
+          controls: [
+            'play',
+            'pause',
+            'mute',
+            'volume',
+            'progress',
+            'current-time',
+            'fullscreen'
+          ],
+          hideControls: false,
+          ratio: '16:9',
+          fullscreen: { enabled: true },
+          disableContextMenu: true
+        });
+
+        window.plyrInstance = player;
+      }, 100);
+    };
+
+    window.plyrPlay = () => window.plyrInstance?.play();
+    window.plyrPause = () => window.plyrInstance?.pause();
+    window.rewind10s = () => {
+      if (window.plyrInstance) {
+        window.plyrInstance.currentTime = Math.max(0, window.plyrInstance.currentTime - 10);
+        console.log('Rewound 10s');
+      }
+    };
+
+    window.forward10s = () => {
+      if (window.plyrInstance) {
+        window.plyrInstance.currentTime = Math.min(window.plyrInstance.duration, window.plyrInstance.currentTime + 10);
+        console.log('Forwarded 10s');
+      }
+    };
+    window.setPlaybackSpeed = (speed) => {
+      if (window.plyrInstance) {
+        window.plyrInstance.speed = speed;
+        console.log(`Playback speed set to ${speed}`);
+      } else {
+        console.warn('Plyr instance not ready.');
+      }
+    };
+    window.plyrMute = () => window.plyrInstance && (window.plyrInstance.muted = true);
+    window.plyrUnmute = () => window.plyrInstance && (window.plyrInstance.muted = false);
+  </script>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="theme-color" content="#000000" />
 </head>
+
 <body>
+  <div id="player-container"></div>
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+  </script>
+  <script>
+    const playerContainer = document.getElementById('player-container');
+    playerContainer?.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+  </script>
+
 </body>
+
 </html>
